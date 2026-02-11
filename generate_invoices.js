@@ -91,14 +91,21 @@ function generateInvoices() {
 }
 
 function extractPlantName(header) {
+  let name = header.trim();
+
+  // Cut at colon (but keep the part before it)
+  const colonIdx = name.indexOf(':');
+  if (colonIdx > 0) {
+    name = name.substring(0, colonIdx);
+  }
+
   // Common patterns that start descriptions
   const descriptionStarters = [
     " A ", " An ", " The ", " Often ", " Usually ", " These ", " This ",
     " Known ", " Widely ", " Famous ", " prized ", " is a ", " is the ",
-    "(Limited", "100,000", " –"
+    "(Limited", "100,000", " – ", " Mild ", " Long ", " Best ", " Perfect ",
+    " Great ", " Your ", " Since ", " It ", " They "
   ];
-
-  let name = header.trim();
 
   // Find the earliest description starter
   let cutoff = name.length;
