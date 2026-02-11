@@ -1,3 +1,10 @@
+function onOpen() {
+  SpreadsheetApp.getUi()
+    .createMenu('Seedling Sale')
+    .addItem('Generate Invoices', 'generateInvoices')
+    .addToUi();
+}
+
 function generateInvoices() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const sourceSheet = ss.getSheetByName("Form Responses 1"); // Adjust to your sheet name
