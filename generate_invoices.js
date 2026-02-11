@@ -33,6 +33,7 @@ function generateInvoices() {
   }
 
   const output = [["SEEDLING INVOICES"]];
+  const boldRows = [1]; // Track rows to bold (1-indexed)
 
   // Process each order row (skip header rows, start at row with actual data)
   for (let row = 1; row < data.length; row++) {
@@ -78,6 +79,7 @@ function generateInvoices() {
     output.push([`Name: ${name || ""}`]);
     output.push([`Email: ${email || ""}`]);
     output.push(["ITEMS ORDERED:"]);
+    boldRows.push(output.length); // Track ITEMS ORDERED row
 
     for (const item of items) {
       output.push([`${item.qty} × ${item.name}`]);
@@ -86,6 +88,7 @@ function generateInvoices() {
     output.push([""]);
     const total = totalPlants * 4;
     output.push([`TOTAL: ${totalPlants} plants × $4 = $${total}`]);
+    boldRows.push(output.length); // Track TOTAL row
     output.push([""]);
     output.push(["-------------------------------------------------------"]);
     output.push([""]);
@@ -94,6 +97,11 @@ function generateInvoices() {
   // Write to invoice sheet
   if (output.length > 0) {
     invoiceSheet.getRange(1, 1, output.length, 1).setValues(output);
+
+    // Apply bold formatting
+    for (const row of boldRows) {
+      invoiceSheet.getRange(row, 1).setFontWeight('bold');
+    }
   }
 }
 
