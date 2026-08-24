@@ -1,140 +1,78 @@
 function onOpen() {
   SpreadsheetApp.getUi()
-    .createMenu('Seedling Sale')
-    .addItem('Generate Invoices', 'generateInvoices')
+    .createMenu("Seedling Sale")
+    .addItem("Generate Receipts", "generateReceipts")
     .addToUi();
 }
 
-function generateInvoices() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sourceSheet = ss.getSheetByName("Form Responses 1"); // Adjust to your sheet name
+function generateReceipts() {
+  const saleConfig = getActiveSaleConfig();
+  const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+  const sourceSheet = spreadsheet.getSheetByName(saleConfig.sourceSheetName);
 
-  // Create or clear the invoice sheet
-  let invoiceSheet = ss.getSheetByName("Invoices");
-  if (invoiceSheet) {
-    invoiceSheet.clear();
-  } else {
-    invoiceSheet = ss.insertSheet("Invoices");
+  if (!sourceSheet) {
+    throw new Error(`Source sheet not found: ${saleConfig.sourceSheetName}.`);
   }
 
   const data = sourceSheet.getDataRange().getValues();
-  const headers = data[0];
+  if (data.length === 0) {
+    throw new Error("Source sheet has no header row.");
+  }
 
-  // Extract plant names from headers (columns 4 onward, index 4+)
-  // Plant name is the first few words before the description
-  const plantColumns = [];
-  for (let col = 4; col < headers.length; col++) {
-    const fullHeader = headers[col];
-    if (fullHeader && fullHeader.trim()) {
-      // Extract plant name - take text before common description patterns
-      let plantName = extractPlantName(fullHeader);
-      plantColumns.push({ col: col, name: plantName });
+  const [headers, ...orderRows] = data;
+  const readOrder = createOrderReader(headers, saleConfig);
+  const outputRows = [[saleConfig.receiptTitle]];
+  const boldRows = [1];
+
+  for (const orderRow of orderRows) {
+    const order = readOrder(orderRow);
+    if (!order) {
+      continue;
+    }
+
+    const receipt = buildReceiptRows(
+      order,
+      formatOrderDate(order.timestamp),
+      saleConfig,
+    );
+    const firstReceiptRow = outputRows.length + 1;
+    outputRows.push(...receipt.rows);
+
+    for (const rowOffset of receipt.boldRowOffsets) {
+      boldRows.push(firstReceiptRow + rowOffset - 1);
     }
   }
 
-  const output = [["SEEDLING INVOICES"]];
-  const boldRows = [1]; // Track rows to bold (1-indexed)
-
-  // Process each order row (skip header rows, start at row with actual data)
-  for (let row = 1; row < data.length; row++) {
-    const rowData = data[row];
-    const timestamp = rowData[0];
-    const email = rowData[1];
-    const name = rowData[2];
-    // Column 3 is coupon code, skip it
-
-    // Skip empty rows
-    if (!timestamp || (!email && !name)) continue;
-
-    // Format date
-    let orderDate = "";
-    if (timestamp instanceof Date) {
-      orderDate = Utilities.formatDate(timestamp, Session.getScriptTimeZone(), "MMM dd, yyyy");
-    } else if (timestamp) {
-      // Try to parse string date
-      const parsed = new Date(timestamp);
-      if (!isNaN(parsed)) {
-        orderDate = Utilities.formatDate(parsed, Session.getScriptTimeZone(), "MMM dd, yyyy");
-      }
-    }
-
-    // Collect items ordered
-    const items = [];
-    let totalPlants = 0;
-
-    for (const plant of plantColumns) {
-      const qty = rowData[plant.col];
-      if (qty && qty !== "" && !isNaN(parseInt(qty))) {
-        const quantity = parseInt(qty);
-        items.push({ qty: quantity, name: plant.name });
-        totalPlants += quantity;
-      }
-    }
-
-    // Skip if no items ordered
-    if (items.length === 0) continue;
-
-    // Build invoice
-    output.push([`Order Date: ${orderDate}`]);
-    output.push([`Name: ${name || ""}`]);
-    output.push([`Email: ${email || ""}`]);
-    output.push(["ITEMS ORDERED:"]);
-    boldRows.push(output.length); // Track ITEMS ORDERED row
-
-    for (const item of items) {
-      output.push([`${item.qty} × ${item.name}`]);
-    }
-
-    output.push([""]);
-    const total = totalPlants * 4;
-    output.push([`TOTAL: ${totalPlants} plants × $4 = $${total}`]);
-    boldRows.push(output.length); // Track TOTAL row
-    output.push([""]);
-    output.push(["-------------------------------------------------------"]);
-    output.push([""]);
-  }
-
-  // Write to invoice sheet
-  if (output.length > 0) {
-    invoiceSheet.getRange(1, 1, output.length, 1).setValues(output);
-
-    // Apply bold formatting
-    for (const row of boldRows) {
-      invoiceSheet.getRange(row, 1).setFontWeight('bold');
-    }
-  }
+  writeReceipts(spreadsheet, saleConfig.receiptSheetName, outputRows, boldRows);
 }
 
-function extractPlantName(header) {
-  let name = header.trim();
-
-  // Cut at colon (but keep the part before it)
-  const colonIdx = name.indexOf(':');
-  if (colonIdx > 0) {
-    name = name.substring(0, colonIdx);
+function formatOrderDate(timestamp) {
+  const date = timestamp instanceof Date ? timestamp : new Date(timestamp);
+  if (Number.isNaN(date.getTime())) {
+    throw new Error(`Order timestamp is invalid: ${timestamp}.`);
   }
 
-  // Common patterns that start descriptions
-  const descriptionStarters = [
-    " A ", " An ", " The ", " Often ", " Usually ", " These ", " This ",
-    " Known ", " Widely ", " Famous ", " prized ", " is a ", " is the ",
-    "(Limited", "100,000", " – ", " Mild ", " Long ", " Best ", " Perfect ",
-    " Great ", " Your ", " Since ", " It ", " They "
-  ];
+  return Utilities.formatDate(
+    date,
+    Session.getScriptTimeZone(),
+    "MMM dd, yyyy",
+  );
+}
 
-  // Find the earliest description starter
-  let cutoff = name.length;
-  for (const starter of descriptionStarters) {
-    const idx = name.indexOf(starter);
-    if (idx > 0 && idx < cutoff) {
-      cutoff = idx;
-    }
+function writeReceipts(spreadsheet, receiptSheetName, outputRows, boldRows) {
+  let receiptSheet = spreadsheet.getSheetByName(receiptSheetName);
+  if (!receiptSheet) {
+    receiptSheet = spreadsheet.insertSheet(receiptSheetName);
   }
 
-  name = name.substring(0, cutoff).trim();
+  const rowsToReset = Math.max(receiptSheet.getLastRow(), outputRows.length);
+  if (rowsToReset > 0) {
+    receiptSheet.getRange(1, 1, rowsToReset, 1)
+      .clearContent()
+      .setFontWeight("normal");
+  }
 
-  // Clean up trailing punctuation
-  name = name.replace(/[:.,;]+$/, "").trim();
-
-  return name;
+  receiptSheet.getRange(1, 1, outputRows.length, 1).setValues(outputRows);
+  receiptSheet.getRangeList(boldRows.map((row) => `A${row}`))
+    .setFontWeight("bold");
 }
