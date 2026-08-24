@@ -6,15 +6,15 @@
 - `presale.csv` is an exported form-response fixture used to inspect current input shape.
 - `example.csv` shows the intended receipt output format from a prior sale.
 
-This is a Google Form → Google Sheet → bound Apps Script workflow. The source sheet is named `Form Responses 1`; generated receipts are written to the code-named `Invoices` sheet.
+This is a Google Form → Google Sheet → bound Apps Script workflow. The source sheet is named `Form Responses 1`; generated receipts are written to `Receipts`.
 
 ## Development and Validation
 
 No package manager, build step, linter, or automated test runner is configured. Validate changes in the target spreadsheet:
 
 1. Paste or sync `generate_invoices.js` into the bound Apps Script project.
-2. Reload the spreadsheet to run `onOpen` and expose **Seedling Sale → Generate Invoices**.
-3. Run the generator against representative form responses and confirm receipt lines, totals, and bold formatting in `Invoices`.
+2. Reload the spreadsheet to run `onOpen` and expose **Seedling Sale → Generate Receipts**.
+3. Run the generator against representative form responses and confirm receipt lines, totals, and bold formatting in `Receipts`.
 
 Use `rg` for local inspection, for example `rg "extractPlantName|totalPlants" generate_invoices.js`. Do not edit `output.csv` if it exists locally; it is generated, untracked output.
 
