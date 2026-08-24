@@ -2,21 +2,21 @@
 
 ## Project Structure
 
-- `generate_invoices.js` contains the Google Apps Script entry points and receipt-generation logic.
-- `presale.csv` is an exported form-response fixture used to inspect current input shape.
-- `example.csv` shows the intended receipt output format from a prior sale.
+- `src/` contains the Google Apps Script source and manifest.
+- `fixtures/form-responses-2026.csv` is an anonymized form-response fixture.
+- `fixtures/receipt-output-2026.csv` shows the intended receipt output.
 
 This is a Google Form → Google Sheet → bound Apps Script workflow. The source sheet is named `Form Responses 1`; generated receipts are written to `Receipts`.
 
 ## Development and Validation
 
-No package manager, build step, linter, or automated test runner is configured. Validate changes in the target spreadsheet:
+No local package manager, build step, linter, or CI job is configured. Validate changes in the target spreadsheet:
 
-1. Paste or sync `generate_invoices.js` into the bound Apps Script project.
+1. Paste or sync every JavaScript file in `src/` into the bound Apps Script project.
 2. Reload the spreadsheet to run `onOpen` and expose **Seedling Sale → Generate Receipts**.
 3. Run the generator against representative form responses and confirm receipt lines, totals, and bold formatting in `Receipts`.
 
-Use `rg` for local inspection, for example `rg "extractPlantName|totalPlants" generate_invoices.js`. Do not edit `output.csv` if it exists locally; it is generated, untracked output.
+Use `rg` for local inspection, for example `rg "extractPlantName|totalPlantCount" src/`. Do not edit `output.csv` if it exists locally; it is generated, untracked output.
 
 ## Coding Style and Naming
 
@@ -26,7 +26,7 @@ Keep spreadsheet-specific strings and column assumptions near the code that cons
 
 ## Testing Guidelines
 
-Run `runReceiptCoreTests()` from the bound Apps Script project before deploying. It verifies the 2026 headers, totals, malformed quantities, missing headers, and empty orders. Also exercise changes manually with representative form responses and compare generated output with `example.csv` when changing receipt layout.
+Run `runReceiptCoreTests()` from the bound Apps Script project before deploying. It verifies the 2026 headers, totals, malformed quantities, missing headers, and empty orders. Also exercise changes manually with representative form responses and compare generated output with `fixtures/receipt-output-2026.csv` when changing receipt layout.
 
 ## Commits and Pull Requests
 

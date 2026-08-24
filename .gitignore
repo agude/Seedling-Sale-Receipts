@@ -1,2 +1,6 @@
 # Generated receipt export
 output.csv
+
+# Local clasp project and OAuth credentials
+.clasp.json
+.clasprc.json
