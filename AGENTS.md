@@ -20,13 +20,13 @@ Use `rg` for local inspection, for example `rg "extractPlantName|totalPlants" ge
 
 ## Coding Style and Naming
 
-Use two-space indentation, semicolons, `const` by default, and `let` only for reassigned bindings. Keep Apps Script entry points in camelCase, such as `generateInvoices()` and `onOpen()`. Name helpers as verbs (`extractPlantName`) and use descriptive collection names (`plantColumns`, `boldRows`).
+Use two-space indentation, semicolons, `const` by default, and `let` only for reassigned bindings. Keep Apps Script entry points in camelCase, such as `generateReceipts()` and `onOpen()`. Name helpers as verbs (`extractPlantName`) and use descriptive collection names (`itemColumns`, `boldRows`).
 
 Keep spreadsheet-specific strings and column assumptions near the code that consumes them. Preserve the zero-based JavaScript indexes and document any spreadsheet-column mapping changes.
 
 ## Testing Guidelines
 
-There are no automated tests. Exercise both normal and edge cases manually: empty submissions, submissions with no quantities, numeric quantities, and headers containing descriptions or colons. Compare generated output with `example.csv` when changing formatting or receipt layout.
+Run `runReceiptCoreTests()` from the bound Apps Script project before deploying. It verifies the 2026 headers, totals, malformed quantities, missing headers, and empty orders. Also exercise changes manually with representative form responses and compare generated output with `example.csv` when changing receipt layout.
 
 ## Commits and Pull Requests
 
